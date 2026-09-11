@@ -1,0 +1,16 @@
+/root/sandbox-ffi-layers/target/debug/deps/assert_cmd-0ae0cd3c8de4219e.d: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/macros.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/assert.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cargo.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cmd.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/output.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/color.rs /root/sandbox-ffi-layers/target/debug/build/assert_cmd-fdca63619ff96a47/out/current_target.txt
+
+/root/sandbox-ffi-layers/target/debug/deps/libassert_cmd-0ae0cd3c8de4219e.rlib: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/macros.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/assert.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cargo.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cmd.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/output.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/color.rs /root/sandbox-ffi-layers/target/debug/build/assert_cmd-fdca63619ff96a47/out/current_target.txt
+
+/root/sandbox-ffi-layers/target/debug/deps/libassert_cmd-0ae0cd3c8de4219e.rmeta: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/macros.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/assert.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cargo.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cmd.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/output.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/color.rs /root/sandbox-ffi-layers/target/debug/build/assert_cmd-fdca63619ff96a47/out/current_target.txt
+
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/lib.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/macros.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/assert.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cargo.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/cmd.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/output.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/assert_cmd-2.2.2/src/color.rs:
+/root/sandbox-ffi-layers/target/debug/build/assert_cmd-fdca63619ff96a47/out/current_target.txt:
+
+# env-dep:OUT_DIR=/root/sandbox-ffi-layers/target/debug/build/assert_cmd-fdca63619ff96a47/out
