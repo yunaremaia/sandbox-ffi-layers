@@ -159,7 +159,7 @@ pub fn known_proc_macro_crates() -> HashMap<String, String> {
 }
 
 /// Heuristic: detect if a crate name looks like a proc-macro crate.
-fn looks_like_proc_macro(name: &str) -> bool {
+pub fn looks_like_proc_macro(name: &str) -> bool {
     // Known proc-macro patterns (including typosquats of proc-macro2)
     if name == "proc-macro1" || name == "proc-macro-en" {
         return true;
