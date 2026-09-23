@@ -175,10 +175,7 @@ mod tests {
     #[test]
     fn validate_lockfile_path_rejects_nonexistent_file() {
         let result = validate_lockfile_path("/nonexistent/path/to/lockfile");
-        assert!(
-            result.is_err(),
-            "expected Err for nonexistent file"
-        );
+        assert!(result.is_err(), "expected Err for nonexistent file");
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.contains("does not exist") || err_msg.contains("NotFound"),
@@ -190,10 +187,7 @@ mod tests {
     #[test]
     fn validate_lockfile_path_rejects_directory() {
         let result = validate_lockfile_path("src");
-        assert!(
-            result.is_err(),
-            "expected Err for directory"
-        );
+        assert!(result.is_err(), "expected Err for directory");
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.contains("directory") || err_msg.contains("IsDirectory"),
