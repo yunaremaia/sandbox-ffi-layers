@@ -31,6 +31,10 @@ executed a remote payload during `cargo build`. Over 2,285 downloads before remo
 cargo install --locked sandbox-ffi-layers
 ```
 
+## Supported Cargo.lock Versions
+
+`sandbox-ffi-layers` supports parsing both **Cargo.lock v3** and **Cargo.lock v4** (default in Rust 1.78+) formats. Unknown versions will trigger a warning to stderr.
+
 ## Usage
 
 ```bash
