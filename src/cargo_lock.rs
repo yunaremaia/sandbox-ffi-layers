@@ -36,7 +36,6 @@ pub fn parse_cargo_lock(content: &str) -> anyhow::Result<Vec<Package>> {
 
     for line in content.lines() {
         let trimmed = line.trim();
-        
         if trimmed == "[[package]]" {
             // Save previous if exists
             if let (Some(name), Some(version)) = (current_name.take(), current_version.take()) {
@@ -61,9 +60,7 @@ pub fn parse_cargo_lock(content: &str) -> anyhow::Result<Vec<Package>> {
             deps_buffer.push_str(trimmed);
             if trimmed.contains(']') {
                 // Parse the accumulated buffer
-                let inner = deps_buffer
-                    .trim_start_matches('[')
-                    .trim_end_matches(']');
+                let inner = deps_buffer.trim_start_matches('[').trim_end_matches(']');
                 current_deps = inner
                     .split(',')
                     .map(|s| s.trim().trim_matches('"').to_string())
@@ -93,9 +90,7 @@ pub fn parse_cargo_lock(content: &str) -> anyhow::Result<Vec<Package>> {
                 deps_buffer = trimmed[start..].to_string();
                 if deps_buffer.contains(']') {
                     // Closed on same line somehow
-                    let inner = deps_buffer
-                        .trim_start_matches('[')
-                        .trim_end_matches(']');
+                    let inner = deps_buffer.trim_start_matches('[').trim_end_matches(']');
                     current_deps = inner
                         .split(',')
                         .map(|s| s.trim().trim_matches('"').to_string())
@@ -195,8 +190,10 @@ pub fn analyze_native_surface(packages: &[Package]) -> Vec<NativeSurface> {
     packages
         .iter()
         .map(|pkg| {
-            let has_proc_macro = proc_macros.contains_key(&pkg.name) || looks_like_proc_macro(&pkg.name);
-            let has_build_script = pkg.name.contains("build") || pkg.name == "cc" || pkg.name == "cmake";
+            let has_proc_macro =
+                proc_macros.contains_key(&pkg.name) || looks_like_proc_macro(&pkg.name);
+            let has_build_script =
+                pkg.name.contains("build") || pkg.name == "cc" || pkg.name == "cmake";
             let has_build_dependencies = !pkg.dependencies.is_empty()
                 && pkg
                     .dependencies
