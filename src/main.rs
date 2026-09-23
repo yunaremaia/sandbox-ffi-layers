@@ -8,6 +8,7 @@ mod cargo_lock;
 
 use anyhow::Result;
 use clap::Parser;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 /// Errors that can occur during lockfile path validation.
@@ -92,6 +93,25 @@ struct Cli {
     fail_critical: bool,
 }
 
+/// Read a lockfile with specific error messages for each failure mode.
+pub fn read_lockfile(path: &Path) -> anyhow::Result<String> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => Ok(content),
+        Err(e) => {
+            let kind = e.kind();
+            let msg = match kind {
+                ErrorKind::NotFound => format!("lockfile not found: {}", path.display()),
+                ErrorKind::PermissionDenied => {
+                    format!("permission denied reading lockfile: {}", path.display())
+                }
+                ErrorKind::InvalidData => format!("invalid UTF-8 in lockfile: {}", path.display()),
+                _ => format!("cannot read lockfile {}: {}", path.display(), e),
+            };
+            Err(anyhow::anyhow!(msg))
+        }
+    }
+}
+
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter("sandbox_ffi_layers=info")
@@ -101,7 +121,7 @@ fn main() -> Result<()> {
 
     if args.check {
         let lockfile_path = validate_lockfile_path(&args.lockfile)?;
-        let content = std::fs::read_to_string(&lockfile_path)?;
+        let content = read_lockfile(&lockfile_path)?;
         let packages = cargo_lock::parse_cargo_lock(&content)?;
         let surfaces = cargo_lock::analyze_native_surface(&packages);
 
@@ -208,5 +228,33 @@ mod tests {
             result.is_err() || result.unwrap().ends_with("passwd"),
             "expected error or safe rejection for /etc/passwd"
         );
+    }
+
+    #[test]
+    fn read_lockfile_reports_not_found() {
+        let result = read_lockfile(Path::new("/nonexistent/lockfile"));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("not found"),
+            "expected 'not found' in error: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_lockfile_reports_invalid_utf8() {
+        // Create a file with invalid UTF-8 bytes
+        let tmp = std::env::temp_dir().join("sandbox-ffi-invalid-utf8");
+        std::fs::write(&tmp, vec![0xff, 0xfe, 0x00, 0x01]).unwrap();
+        let result = read_lockfile(&tmp);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("utf-8") || err.contains("UTF-8") || err.contains("InvalidData"),
+            "expected invalid UTF-8 indication in error: {}",
+            err
+        );
+        std::fs::remove_file(&tmp).ok();
     }
 }
