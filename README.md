@@ -56,3 +56,7 @@ See [PROPOSAL.md](PROPOSAL.md) for full roadmap.
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE).
+
+# sandbox-ffi-layers
+
+![CI](https://github.com/yunaremaia/sandbox-ffi-layers/actions/workflows/ci.yml/badge.svg)
