@@ -359,5 +359,6 @@ dependencies = ["serde_derive", "cfg-if"]
         assert!(looks_like_proc_macro("futures-macro"));
         assert!(!looks_like_proc_macro("serde"));
         assert!(!looks_like_proc_macro("tokio"));
+
     }
 }
