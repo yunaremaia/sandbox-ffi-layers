@@ -268,4 +268,5 @@ mod json_tests {
         assert_eq!(parsed["summary"]["total"], 0);
         assert!(parsed["results"].as_array().unwrap().is_empty());
     }
+
 }
