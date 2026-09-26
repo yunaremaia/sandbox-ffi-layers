@@ -96,7 +96,10 @@ fn main() -> Result<()> {
                 results.push(JsonResult {
                     id: "known-malicious-package".to_string(),
                     severity: "error".to_string(),
-                    message: format!("Blocked known malicious/typosquat package: {}@{}", m.name, m.version),
+                    message: format!(
+                        "Blocked known malicious/typosquat package: {}@{}",
+                        m.name, m.version
+                    ),
                     file: args.lockfile.clone(),
                     line: 0,
                     suggestion: Some("Remove or replace this dependency immediately.".to_string()),
@@ -105,9 +108,15 @@ fn main() -> Result<()> {
 
             for surface in &surfaces {
                 let risk_msg = if surface.has_proc_macro {
-                    format!("proc-macro crate: {}@{}", surface.package.name, surface.package.version)
+                    format!(
+                        "proc-macro crate: {}@{}",
+                        surface.package.name, surface.package.version
+                    )
                 } else {
-                    format!("build script dependency: {}@{}", surface.package.name, surface.package.version)
+                    format!(
+                        "build script dependency: {}@{}",
+                        surface.package.name, surface.package.version
+                    )
                 };
                 results.push(JsonResult {
                     id: "native-build-surface".to_string(),
@@ -115,7 +124,9 @@ fn main() -> Result<()> {
                     message: risk_msg,
                     file: args.lockfile.clone(),
                     line: 0,
-                    suggestion: Some("Review build scripts and proc-macros for untrusted execution.".to_string()),
+                    suggestion: Some(
+                        "Review build scripts and proc-macros for untrusted execution.".to_string(),
+                    ),
                 });
             }
 
@@ -182,7 +193,10 @@ fn main() -> Result<()> {
         std::process::exit(2);
     } else {
         if is_json {
-            println!(r#"{{"version": "1.0.0", "message": "sandbox-ffi-layers v{}"}}"#, env!("CARGO_PKG_VERSION"));
+            println!(
+                r#"{{"version": "1.0.0", "message": "sandbox-ffi-layers v{}"}}"#,
+                env!("CARGO_PKG_VERSION")
+            );
         } else {
             println!("sandbox-ffi-layers v{}", env!("CARGO_PKG_VERSION"));
             println!("Use --check to analyze a Cargo.lock, or --watch for runtime monitoring");
@@ -207,16 +221,14 @@ mod json_tests {
                 warnings: 2,
                 passed: 7,
             },
-            results: vec![
-                JsonResult {
-                    id: "test-finding".to_string(),
-                    severity: "error".to_string(),
-                    message: "Found test issue with unicode 🦀".to_string(),
-                    file: "Cargo.lock".to_string(),
-                    line: 42,
-                    suggestion: Some("Fix it".to_string()),
-                }
-            ],
+            results: vec![JsonResult {
+                id: "test-finding".to_string(),
+                severity: "error".to_string(),
+                message: "Found test issue with unicode 🦀".to_string(),
+                file: "Cargo.lock".to_string(),
+                line: 42,
+                suggestion: Some("Fix it".to_string()),
+            }],
         };
 
         let serialized = serde_json::to_string(&report).unwrap();
@@ -231,7 +243,10 @@ mod json_tests {
         let parsed: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert_eq!(parsed["version"], "1.0.0");
         assert_eq!(parsed["summary"]["total"], 10);
-        assert_eq!(parsed["results"][0]["message"], "Found test issue with unicode 🦀");
+        assert_eq!(
+            parsed["results"][0]["message"],
+            "Found test issue with unicode 🦀"
+        );
     }
 
     #[test]
