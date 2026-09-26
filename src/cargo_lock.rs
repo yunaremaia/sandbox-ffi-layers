@@ -361,4 +361,3 @@ dependencies = ["serde_derive", "cfg-if"]
         assert!(!looks_like_proc_macro("tokio"));
     }
 }
-
