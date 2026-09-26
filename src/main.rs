@@ -269,4 +269,3 @@ mod json_tests {
         assert!(parsed["results"].as_array().unwrap().is_empty());
     }
 }
-
