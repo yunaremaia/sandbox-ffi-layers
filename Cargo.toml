@@ -1,0 +1,33 @@
+[package]
+name = "sandbox-ffi-layers"
+version = "0.1.0"
+edition = "2021"
+authors = ["Yunare Maia <yunare@gmail.com>"]
+description = "Runtime security gateway for AI coding agents building with native dependencies"
+license = "AGPL-3.0"
+repository = "https://github.com/yunaremaia/sandbox-ffi-layers"
+keywords = ["security", "supply-chain", "ai-agent", "rust", "sandbox"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.80"
+
+[[bin]]
+name = "sandbox-ffi"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
