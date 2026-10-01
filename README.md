@@ -1,5 +1,7 @@
 # sandbox-ffi-layers
 
+![ci](https://github.com/yunaremaia/sandbox-ffi-layers/actions/workflows/ci.yml/badge.svg) ![license](https://img.shields.io/github/license/yunaremaia/sandbox-ffi-layers) ![stars](https://img.shields.io/github/stars/yunaremaia/sandbox-ffi-layers)
+
 > Runtime security gateway for AI coding agents building with native dependencies.
 
 `sandbox-ffi-layers` intercepts build commands executed by AI coding agents
@@ -53,6 +55,18 @@ sudo sandbox-ffi --watch
 
 See [PROPOSAL.md](PROPOSAL.md) for full roadmap.
 
+If this tool is useful to you, a star helps other people find it.
+
+## Related tools
+
+- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — guardrails for AI-generated code changes
+- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — sandbox untrusted CI steps
+- **[agent-workspace](https://github.com/yunaremaia/agent-workspace)** — isolated workspaces per AI agent session
+- **[agent-guard](https://github.com/yunaremaia/agent-guard)** — enforce guardrails on AI agent tool calls
+
+Part of a family of focused, single-purpose developer tools — each one does one thing
+and does it well.
+
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE).
@@ -60,3 +74,4 @@ AGPL-3.0 — see [LICENSE](LICENSE).
 # sandbox-ffi-layers
 
 ![CI](https://github.com/yunaremaia/sandbox-ffi-layers/actions/workflows/ci.yml/badge.svg)
+
