@@ -25,7 +25,7 @@ Out of scope (and therefore not covered by this policy):
 ## Reporting a Vulnerability
 
 Please **do not open a public issue** for security vulnerabilities.
-Private disclosure is preferered so we can coordinate a fix before details
+Private disclosure is preferred so we can coordinate a fix before details
 become public.
 
 - Report privately by emailing the maintainers (see package `authors` in
