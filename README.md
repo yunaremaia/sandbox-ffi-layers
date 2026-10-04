@@ -69,8 +69,8 @@ If this tool is useful to you, a star helps other people find it.
 
 ## Related tools
 
-- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — guardrails for AI-generated code changes
-- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — sandbox untrusted CI steps
+- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — scan AI-generated code for hardcoded secrets, SQL injection and dangerous eval/exec
+- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — simulate CI pipelines locally without executing anything
 - **[agent-workspace](https://github.com/yunaremaia/agent-workspace)** — isolated workspaces per AI agent session
 - **[agent-guard](https://github.com/yunaremaia/agent-guard)** — enforce guardrails on AI agent tool calls
 
