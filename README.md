@@ -29,8 +29,10 @@ executed a remote payload during `cargo build`. Over 2,285 downloads before remo
 
 ## Installation
 
+Not published to crates.io. Build from source:
+
 ```bash
-cargo install --locked sandbox-ffi-layers
+cargo install --locked --git https://github.com/yunaremaia/sandbox-ffi-layers.git
 ```
 
 ## Usage
@@ -39,21 +41,29 @@ cargo install --locked sandbox-ffi-layers
 # One-shot check of Cargo.lock
 sandbox-ffi --check --lockfile ./Cargo.lock
 
-# With SARIF output for GitHub Code Scanning
-sandbox-ffi --check --format sarif --output results.sarif
+# Machine-readable output for CI
+sandbox-ffi --check --format json
 
 # Fail on critical findings (CI/CD gate)
 sandbox-ffi --check --fail-critical
 
-# Watch mode (requires root, eBPF)
-sudo sandbox-ffi --watch
+# Watch mode (requires root, eBPF) — not implemented yet, exits 2
+sandbox-ffi --watch
 ```
+
+Output formats: `text` (default) and `json`. SARIF is not implemented.
 
 ## Status
 
 **v0.1.0-alpha** — Cargo.lock parser + proc-macro detection + known-malicious blocklist.
 
-See [PROPOSAL.md](PROPOSAL.md) for full roadmap.
+Parses `Cargo.lock` as TOML, so non-`[[package]]` sections (`[[patch.unused]]`,
+`[[metadata]]`) are not mistaken for packages. A lockfile that cannot be parsed
+is reported as an error rather than as "no findings" — for a scanner, an empty
+result reads as an all-clear.
+
+Advisory-database lookups (OSV, RustSec) and runtime interception are not
+implemented. `--watch` is a stub and `--format sarif` does not exist.
 
 If this tool is useful to you, a star helps other people find it.
 

@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The `Cargo.lock` parser reported clean lockfiles that contained a
+  known-malicious package.** `Cargo.lock` is TOML but was read with a
+  hand-rolled line scanner that silently mis-parsed real lockfiles in three
+  ways, each producing a *clean* report rather than a finding:
+  - a `[[package]]` entry with no `version` key was dropped entirely, and its
+    dependencies were handed to the following package;
+  - any non-`package` section (`[[patch.unused]]`, `[[metadata]]`) was read as
+    a continuation of the preceding package, overwriting the last real package
+    in the file;
+  - a file that is not a parsable lockfile yielded an empty package set, which
+    was reported as "no findings".
+
+  The lockfile is now parsed as TOML, and a lockfile that cannot be parsed is
+  reported as an error rather than as an all-clear.
+- **Version-qualified dependencies defeated the proc-macro heuristic.** Cargo
+  writes `"syn 2.0.109"` (and `"syn 2.0.109 (registry+...)"`) whenever a crate
+  appears at more than one version, which is the common case in a real lockfile.
+  The heuristic compared against the qualified string, so those entries matched
+  nothing and the finding vanished. Entries are now reduced to the bare crate
+  name before matching.
+- **A `[[package]]` missing its `version` key is now reported** rather than
+  silently discarded.
+- **`--fail-critical` no longer panics the debug binary.** It derived the short
+  flag `-f`, which collided with `--format`; clap rejects duplicate shorts in a
+  debug assertion, so every debug invocation aborted before doing any work.
+  `--fail-critical` is now long-only. This could not reach CI, which runs
+  `cargo test --release`.
+- **README no longer documents flags that do not exist.** It advertised
+  `--format sarif --output results.sarif`, but there is no `--output` flag and
+  SARIF is not implemented; both flags were silently ignored. The install
+  snippet also ran `cargo install --locked sandbox-ffi-layers` against an
+  unpublished crate, and linked a `PROPOSAL.md` that does not exist.
+
 ## [0.1.0] - 2026-10-03
 
 First tagged release. `0.1.0` is the version already declared in `Cargo.toml`;

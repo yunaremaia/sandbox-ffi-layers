@@ -129,7 +129,7 @@ struct Cli {
     json: bool,
 
     /// Exit with code 1 on critical findings
-    #[arg(short, long)]
+    #[arg(long)]
     fail_critical: bool,
 }
 
