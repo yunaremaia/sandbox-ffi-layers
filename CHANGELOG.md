@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SARIF is not implemented; both flags were silently ignored. The install
   snippet also ran `cargo install --locked sandbox-ffi-layers` against an
   unpublished crate, and linked a `PROPOSAL.md` that does not exist.
+- **`--format` now rejects an unsupported value instead of ignoring it.**
+  `--format sarif`, and any typo such as `--format jsno`, was accepted and then
+  discarded: the tool printed text and exited 0, so a caller asking for SARIF
+  got neither SARIF nor an error. The supported values are now enforced, and an
+  unknown one exits non-zero naming the valid choices.
 
 ## [0.1.0] - 2026-10-03
 
