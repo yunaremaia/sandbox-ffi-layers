@@ -159,6 +159,48 @@ fn an_unparsable_lockfile_is_an_error_not_a_clean_report() {
 }
 
 #[test]
+fn an_unsupported_format_is_rejected_rather_than_silently_ignored() {
+    // `--format sarif` and typos like `--format jsno` used to be accepted and
+    // then ignored, so the tool printed text and exited 0: a caller asking for
+    // SARIF got no SARIF and no error. clap's value_parser rejects the value
+    // up front instead.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("Cargo.lock"), MIXED).unwrap();
+
+    for bad in ["sarif", "jsno"] {
+        let out = Command::cargo_bin("sandbox-ffi")
+            .unwrap()
+            .args(["-c", "--format", bad])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "`--format {bad}` must exit non-zero, not silently emit text"
+        );
+        let stderr = String::from_utf8(out.stderr).unwrap();
+        assert!(
+            stderr.contains(bad) && stderr.contains("text"),
+            "error should name the supported values; got: {stderr}"
+        );
+    }
+
+    // The two supported formats must keep working. MIXED contains a malicious
+    // package, and `--check` exits 1 on findings by design, so assert on the
+    // absence of a *usage* error rather than on a zero exit.
+    let clean = "version = 3\n\n[[package]]\nname = \"serde\"\nversion = \"1.0.228\"\n";
+    std::fs::write(dir.path().join("clean.lock"), clean).unwrap();
+    for good in ["text", "json"] {
+        Command::cargo_bin("sandbox-ffi")
+            .unwrap()
+            .args(["-c", "-l", "clean.lock", "--format", good])
+            .current_dir(dir.path())
+            .assert()
+            .success();
+    }
+}
+
+#[test]
 fn summary_is_a_partition_of_the_package_set() {
     let dir = write_lockfile("overlap.lock", OVERLAPPING);
     let doc = run_json(&dir, "overlap.lock");

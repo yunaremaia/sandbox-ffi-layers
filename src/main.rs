@@ -120,8 +120,8 @@ struct Cli {
     #[arg(short, long, default_value = "./Cargo.lock")]
     lockfile: String,
 
-    /// Output format: text, json, sarif
-    #[arg(short, long, default_value = "text")]
+    /// Output format: text, json
+    #[arg(short, long, default_value = "text", value_parser = ["text", "json"])]
     format: String,
 
     /// Output JSON format (shorthand for --format json)
