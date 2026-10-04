@@ -68,6 +68,96 @@ fn run_json(dir: &tempfile::TempDir, name: &str) -> Value {
     serde_json::from_str(&stdout[start..]).unwrap()
 }
 
+/// A lockfile whose `proc-macro1` entry is preceded by a `[[patch.unused]]`
+/// section. Before the parser was fixed, the patch section's keys overwrote the
+/// preceding package, so the malicious entry vanished from the result set and
+/// the tool reported a clean lockfile.
+const PATCH_OVERWRITE: &str = r#"
+version = 4
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+
+[[package]]
+name = "proc-macro1"
+version = "0.2.9"
+
+[[patch.unused]]
+name = "proc-macro2"
+version = "1.0.104"
+"#;
+
+/// A lockfile where the only native-build signal is a version-qualified
+/// dependency. Cargo emits the qualified form whenever a crate is present at
+/// more than one version, which is the normal case in a real lockfile.
+const VERSION_QUALIFIED_DEP: &str = r#"
+version = 4
+
+[[package]]
+name = "totally-benign"
+version = "1.0.0"
+dependencies = [
+ "serde_derive 1.0.228",
+ "syn 2.0.109",
+]
+"#;
+
+#[test]
+fn a_patch_section_does_not_hide_a_malicious_package() {
+    let dir = write_lockfile("patch.lock", PATCH_OVERWRITE);
+    let doc = run_json(&dir, "patch.lock");
+    let messages: Vec<&str> = doc["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["message"].as_str().unwrap())
+        .collect();
+
+    assert!(
+        messages.iter().any(|m| m.contains("proc-macro1")),
+        "proc-macro1 must be reported; a [[patch.unused]] section must not \
+         overwrite the preceding package. Got: {messages:?}"
+    );
+    assert_eq!(doc["summary"]["errors"], 1);
+}
+
+#[test]
+fn a_version_qualified_dependency_still_raises_a_warning() {
+    let dir = write_lockfile("qualified.lock", VERSION_QUALIFIED_DEP);
+    let doc = run_json(&dir, "qualified.lock");
+
+    assert_eq!(
+        doc["summary"]["warnings"], 1,
+        "a proc-macro dependency qualified by version must still be detected; \
+         got {doc}"
+    );
+}
+
+#[test]
+fn an_unparsable_lockfile_is_an_error_not_a_clean_report() {
+    let dir = write_lockfile("garbage.lock", "this is not a lockfile\n");
+    let out = Command::cargo_bin("sandbox-ffi")
+        .unwrap()
+        .args(["-c", "-l", "garbage.lock", "--json"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    // The failure mode this guards is reporting an unparsable file as "0
+    // findings", which reads as an all-clear. It must be a non-zero exit with
+    // a message naming the problem.
+    assert!(
+        !out.status.success(),
+        "an unparsable lockfile must not exit successfully (would read as clean)"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("not a parsable Cargo.lock"),
+        "expected an explicit refusal on stderr, got: {stderr}"
+    );
+}
+
 #[test]
 fn summary_is_a_partition_of_the_package_set() {
     let dir = write_lockfile("overlap.lock", OVERLAPPING);

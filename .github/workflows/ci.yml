@@ -17,6 +17,11 @@ jobs:
     - uses: actions/checkout@v5
     - uses: dtolnay/rust-toolchain@stable
     - run: cargo test --release
+    # Debug profile too: clap's duplicate-short-flag and argument-validation
+    # checks are debug assertions, so a release-only run cannot see them. A
+    # colliding `-f` short flag panicked on every debug invocation and shipped
+    # unnoticed because this job only ever ran release.
+    - run: cargo test
 
   lint:
     name: Lint
@@ -27,7 +32,7 @@ jobs:
       with:
         components: clippy, rustfmt
     - run: cargo fmt -- --check
-    - run: cargo clippy -- -D warnings
+    - run: cargo clippy --all-targets -- -D warnings
 
   build:
     name: Build

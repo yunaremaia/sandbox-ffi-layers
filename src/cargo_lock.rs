@@ -23,122 +23,100 @@ pub struct NativeSurface {
     pub has_build_dependencies: bool,
 }
 
-/// Parse Cargo.lock v3 or v4 format and return a list of packages.
+/// Deserialize target for a single `[[package]]` entry.
+#[derive(serde::Deserialize)]
+struct LockPackage {
+    name: String,
+    #[serde(default)]
+    version: Option<String>,
+    #[serde(default)]
+    checksum: Option<String>,
+    #[serde(default)]
+    dependencies: Vec<String>,
+}
+
+/// Deserialize target for the whole lockfile.
+#[derive(serde::Deserialize, Default)]
+struct LockFile {
+    #[serde(default)]
+    package: Vec<LockPackage>,
+}
+
+/// Parse a Cargo.lock and return a list of packages.
+///
+/// Cargo.lock is TOML, so it is parsed as TOML rather than scanned line by
+/// line. The line scanner this replaced mis-read real lockfiles in ways that
+/// all produced the same outcome — a *clean* report on a lockfile that
+/// contained a known-malicious package:
+///
+/// - a `[[package]]` with no `version` key was dropped entirely, and its
+///   dependencies were handed to the following package;
+/// - a non-`package` section (`[[patch.unused]]`, `[[metadata]]`) was read as
+///   a continuation of the preceding package, overwriting it;
+/// - a lockfile with no parsable packages yielded `Ok(vec![])`, which callers
+///   reported as "no findings" rather than as a failure.
+///
+/// Unknown lockfile `version` values are reported, not fatal: Cargo may add a
+/// format revision before this tool knows about it, and refusing to scan is
+/// the same failure mode as the false negatives above.
 pub fn parse_cargo_lock(content: &str) -> anyhow::Result<Vec<Package>> {
-    let mut packages = Vec::new();
-    let mut current_name: Option<String> = None;
-    let mut current_version: Option<String> = None;
-    let mut current_checksum: Option<String> = None;
-    let mut current_deps: Vec<String> = Vec::new();
-    let mut in_package = false;
-    let mut in_deps = false;
-    let mut deps_buffer = String::new();
+    let file: LockFile = toml::from_str(content).map_err(|e| {
+        anyhow::anyhow!("not a parsable Cargo.lock ({e}) — refusing to report it as clean")
+    })?;
 
+    if let Some(version) = toml_lockfile_version(content) {
+        if version != 3 && version != 4 {
+            eprintln!(
+                "⚠️  WARNING: Unknown Cargo.lock version: {version}. \
+                 Fields added in that revision may be ignored."
+            );
+        }
+    }
+
+    Ok(file
+        .package
+        .into_iter()
+        .map(|p| Package {
+            name: p.name,
+            // A package with no `version` is malformed but must still be
+            // reported: dropping it would hide a malicious entry.
+            version: p.version.unwrap_or_else(|| "unknown".to_string()),
+            checksum: p.checksum,
+            dependencies: p.dependencies.iter().map(|d| dependency_name(d)).collect(),
+        })
+        .collect())
+}
+
+/// Read the top-level `version = N` key that declares the lockfile format.
+///
+/// Read separately from the deserialized struct because the key exists to
+/// select a *format*, so it is meaningful precisely when the structure it
+/// describes is not the one this version understands.
+fn toml_lockfile_version(content: &str) -> Option<u32> {
     for line in content.lines() {
-        let trimmed = line.trim();
-
-        if !in_package && trimmed.starts_with("version") {
-            if let Some((_, val)) = trimmed.split_once('=') {
-                let ver_str = val.trim().trim_matches('"');
-                if let Ok(ver) = ver_str.parse::<u32>() {
-                    if ver != 3 && ver != 4 {
-                        eprintln!("⚠️  WARNING: Unknown Cargo.lock version: {ver}. Parser may not handle all fields correctly.");
-                    }
-                }
-            }
-            continue;
+        let line = line.trim();
+        if line.starts_with('[') {
+            // Past the header block; the top-level `version` comes first.
+            return None;
         }
-
-        if trimmed == "[[package]]" {
-            // Save previous if exists
-            if let (Some(name), Some(version)) = (current_name.take(), current_version.take()) {
-                packages.push(Package {
-                    name,
-                    version,
-                    checksum: current_checksum.take(),
-                    dependencies: std::mem::take(&mut current_deps),
-                });
-            }
-            in_package = true;
-            in_deps = false;
-            continue;
-        }
-
-        if !in_package {
-            continue;
-        }
-
-        // Handle multi-line dependencies array
-        if in_deps {
-            deps_buffer.push_str(trimmed);
-            if trimmed.contains(']') {
-                // Parse the accumulated buffer
-                let inner = deps_buffer.trim_start_matches('[').trim_end_matches(']');
-                current_deps = inner
-                    .split(',')
-                    .map(|s| s.trim().trim_matches('"').to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                in_deps = false;
-                deps_buffer.clear();
-            }
-            continue;
-        }
-
-        if trimmed.starts_with("dependencies") {
-            if trimmed.contains('[') && trimmed.contains(']') && trimmed.matches('"').count() >= 2 {
-                // Single-line: dependencies = ["a", "b"]
-                let start = trimmed.find('[').unwrap();
-                let end = trimmed.rfind(']').unwrap();
-                let inner = &trimmed[start + 1..end];
-                current_deps = inner
-                    .split(',')
-                    .map(|s| s.trim().trim_matches('"').to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-            } else if trimmed.contains('[') {
-                // Multi-line starting
-                in_deps = true;
-                let start = trimmed.find('[').unwrap_or(0);
-                deps_buffer = trimmed[start..].to_string();
-                if deps_buffer.contains(']') {
-                    // Closed on same line somehow
-                    let inner = deps_buffer.trim_start_matches('[').trim_end_matches(']');
-                    current_deps = inner
-                        .split(',')
-                        .map(|s| s.trim().trim_matches('"').to_string())
-                        .filter(|s| !s.is_empty())
-                        .collect();
-                    in_deps = false;
-                    deps_buffer.clear();
-                }
-            }
-            continue;
-        }
-
-        if let Some((key, value)) = trimmed.split_once('=') {
-            let key = key.trim();
-            let value = value.trim().trim_matches('"');
-            match key {
-                "name" => current_name = Some(value.to_string()),
-                "version" => current_version = Some(value.to_string()),
-                "checksum" => current_checksum = Some(value.to_string()),
-                _ => {}
+        if let Some((key, value)) = line.split_once('=') {
+            if key.trim() == "version" {
+                return value.trim().parse().ok();
             }
         }
     }
+    None
+}
 
-    // Save last package
-    if let (Some(name), Some(version)) = (current_name.take(), current_version.take()) {
-        packages.push(Package {
-            name,
-            version,
-            checksum: current_checksum,
-            dependencies: current_deps,
-        });
-    }
-
-    Ok(packages)
+/// Reduce a dependency entry to its bare crate name.
+///
+/// Cargo writes `"name"`, `"name version"`, or
+/// `"name version (registry+https://...)"` depending on whether the crate
+/// appears at one or several versions in the lockfile. The proc-macro
+/// heuristic matches on the name, so comparing against the qualified string
+/// silently missed every crate present at multiple versions.
+fn dependency_name(entry: &str) -> String {
+    entry.split_whitespace().next().unwrap_or(entry).to_string()
 }
 
 /// Build a set of known proc-macro crate names for heuristic detection.
@@ -349,6 +327,153 @@ dependencies = ["serde_derive", "cfg-if"]
         let packages = parse_cargo_lock(input).unwrap();
         assert_eq!(packages.len(), 1);
         assert_eq!(packages[0].dependencies, vec!["serde_derive", "cfg-if"]);
+    }
+
+    // Regression tests for the parser silently mis-reading real lockfiles.
+    // Each of these produced a *clean* report on a lockfile that contains a
+    // known-malicious package, which is the worst possible failure for a
+    /// supply-chain scanner: no error, no warning, false assurance.
+    #[test]
+    fn a_lockfile_with_no_package_section_is_an_error_not_a_clean_report() {
+        // The silent-empty-result failure: a file that is not a Cargo.lock at
+        // all used to parse to zero packages, which the CLI then reported as
+        // "0 findings — clean". Refusing is the only safe default for a
+        // scanner, since an empty result reads as an all-clear.
+        let garbage = "this is not a lockfile\n";
+        let err = parse_cargo_lock(garbage).unwrap_err();
+        assert!(
+            err.to_string().contains("not a parsable Cargo.lock"),
+            "expected an explicit refusal, got: {err}"
+        );
+    }
+
+    #[test]
+    fn a_package_missing_its_version_is_still_parsed() {
+        // A `[[package]]` with no `version` line used to be dropped entirely,
+        // taking its dependencies with it and handing them to the next package.
+        let input = r#"
+version = 4
+
+[[package]]
+name = "proc-macro1"
+dependencies = [
+ "evil-payload",
+]
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+"#;
+        let packages = parse_cargo_lock(input).unwrap();
+        let names: Vec<&str> = packages.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["proc-macro1", "serde"],
+            "both packages must be reported; got {names:?}"
+        );
+        // The missing-version package must not inherit or donate dependencies.
+        assert_eq!(
+            packages[1].dependencies,
+            Vec::<String>::new(),
+            "serde must not inherit proc-macro1's dependencies"
+        );
+    }
+
+    #[test]
+    fn a_toml_section_other_than_package_is_not_parsed_as_a_package() {
+        // `[[patch.unused]]` is a real Cargo.lock section. The scanner treated
+        // its `name`/`version` keys as a continuation of the preceding package,
+        // silently overwriting the last real package in the file.
+        let input = r#"
+version = 4
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+
+[[package]]
+name = "proc-macro1"
+version = "0.2.9"
+
+[[patch.unused]]
+name = "proc-macro2"
+version = "1.0.104"
+"#;
+        let packages = parse_cargo_lock(input).unwrap();
+        let names: Vec<&str> = packages.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["serde", "proc-macro1"],
+            "only [[package]] entries count; a patch section must not overwrite \
+             the last real package; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn version_qualified_dependencies_still_match_the_proc_macro_heuristic() {
+        // Cargo writes `"serde_derive 1.0.228"` whenever a crate appears at
+        // more than one version. The heuristic ran on the whole qualified
+        // string, so neither `syn 2.0.109` nor `serde_derive 1.0.228` matched
+        // any rule and the finding vanished.
+        //
+        // Note the deps deliberately exclude `proc-macro*`: that name contains
+        // the substring "macro" and so matched by accident even when
+        // qualified, which is what let the original bug report look fixed.
+        let input = r#"
+version = 4
+
+[[package]]
+name = "totally-benign"
+version = "1.0.0"
+dependencies = [
+ "serde_derive 1.0.228",
+ "syn 2.0.109",
+]
+"#;
+        let packages = parse_cargo_lock(input).unwrap();
+        let surfaces = analyze_native_surface(&packages);
+        let surface = surfaces
+            .iter()
+            .find(|s| s.package.name == "totally-benign")
+            .expect("version-qualified proc-macro deps must still be detected");
+        assert!(
+            surface.has_build_dependencies,
+            "version-qualified dependency names must match the proc-macro \
+             heuristic; got {surface:?}"
+        );
+        assert!(
+            !looks_like_proc_macro("syn 2.0.109"),
+            "guard: the raw qualified string must NOT match, or this test \
+             cannot detect the bug"
+        );
+    }
+
+    #[test]
+    fn a_source_qualified_dependency_name_is_still_matched() {
+        // Full form: "syn 2.0.109 (registry+https://github.com/rust-lang/crates.io-index)".
+        let input = r#"
+version = 3
+
+[[package]]
+name = "app"
+version = "0.1.0"
+dependencies = [
+ "syn 2.0.109 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#;
+        let packages = parse_cargo_lock(input).unwrap();
+        assert_eq!(
+            packages[0].dependencies,
+            vec!["syn"],
+            "a source-qualified entry must reduce to the bare crate name"
+        );
+        let surfaces = analyze_native_surface(&packages);
+        assert!(
+            surfaces
+                .iter()
+                .any(|s| s.package.name == "app" && s.has_build_dependencies),
+            "source-qualified dependency names must still match the heuristic"
+        );
     }
 
     #[test]
