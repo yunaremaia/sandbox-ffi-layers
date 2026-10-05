@@ -83,6 +83,19 @@ pub fn validate_lockfile_path(raw: &str) -> anyhow::Result<PathBuf> {
     // Canonicalize to resolve symlinks and `..` components.
     let canonical = path.canonicalize()?;
 
+    // Containment check. `canonicalize` has already resolved every `..` and
+    // symlink, so this is the only place a path-escape can be caught. Without
+    // it `--lockfile /etc/passwd` reads any file the user can read and echoes
+    // its contents into the parse error, which is the arbitrary file read this
+    // variant was added to reject. `Path::starts_with` compares components, so
+    // a sibling like `/root-evil` does not match a `/root` prefix.
+    let cwd = std::env::current_dir()?.canonicalize()?;
+    if !canonical.starts_with(&cwd) {
+        return Err(anyhow::anyhow!(LockfileError::PathTraversal(
+            path.to_path_buf()
+        )));
+    }
+
     // Defense-in-depth: ensure the resolved path is a regular file we can read.
     if !canonical.is_file() {
         return Err(anyhow::anyhow!(LockfileError::NotReadable(
@@ -375,15 +388,60 @@ mod tests {
 
     #[test]
     fn validate_lockfile_path_rejects_escape_attempt() {
-        // Path with `..` that resolves outside the current directory.
-        // canonicalize will resolve it; we verify the file check catches it.
+        // This test previously asserted `is_err() || unwrap().ends_with(...)`,
+        // which passes whether or not any guard exists — it could not detect
+        // the missing containment check. It now asserts the escape is rejected.
+        //
+        // `/etc/passwd` is used because it is outside the working directory,
+        // exists, and is a readable regular file: it clears every other check in
+        // `validate_lockfile_path`, so only containment can reject it.
         let result = validate_lockfile_path("/etc/passwd");
-        // /etc/passwd exists but canonicalize may succeed; the key is that
-        // we can't read it as a regular file or it's outside our tree.
-        // On most systems this will fail at the file-open check.
         assert!(
-            result.is_err() || result.unwrap().ends_with("passwd"),
-            "expected error or safe rejection for /etc/passwd"
+            result.is_err(),
+            "a path outside the working directory must be rejected, got {:?}",
+            result.map(|p| p.display().to_string())
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("escapes the current directory"),
+            "expected the traversal error, got: {err_msg}"
+        );
+    }
+
+    #[test]
+    fn validate_lockfile_path_rejects_a_sibling_directory_sharing_a_prefix() {
+        // Regression guard for the containment check itself: a sibling named
+        // `<cwd>-evil` starts with the *string* `<cwd>` but is not inside it.
+        // Comparing strings would let this through; comparing `Path` components
+        // does not.
+        //
+        // The file is created for real because a non-existent path is rejected
+        // as "not found" before containment is ever reached, which would make
+        // the assertion pass for the wrong reason.
+        let cwd = std::env::current_dir().unwrap();
+        let parent = cwd.parent().unwrap();
+        let evil_dir = parent.join(format!(
+            "{}-evil",
+            cwd.file_name().unwrap().to_string_lossy()
+        ));
+        let evil_file = evil_dir.join("Cargo.lock");
+
+        if std::fs::create_dir_all(&evil_dir).is_err() {
+            eprintln!("skipping: cannot create sibling dir {}", evil_dir.display());
+            return;
+        }
+        std::fs::write(&evil_file, "version = 3\n").unwrap();
+
+        let result = validate_lockfile_path(evil_file.to_str().unwrap());
+        let err_msg = result.unwrap_err().to_string();
+
+        // Clean up regardless of the assertion outcome.
+        let _ = std::fs::remove_file(&evil_file);
+        let _ = std::fs::remove_dir(&evil_dir);
+
+        assert!(
+            err_msg.contains("escapes the current directory"),
+            "a prefix-sharing sibling must be rejected as traversal, got: {err_msg}"
         );
     }
 
