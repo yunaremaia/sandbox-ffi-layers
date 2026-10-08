@@ -1,0 +1,5 @@
+version = 3
+
+[[patch.unused]]
+name = "serde"
+version = "1.0.0"

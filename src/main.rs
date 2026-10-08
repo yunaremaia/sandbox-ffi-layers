@@ -323,7 +323,10 @@ fn main() -> Result<()> {
             }
 
             if args.fail_critical && !surfaces.is_empty() {
-                eprintln!("⚠️  {} native build surface(s) detected (fail-critical)", surfaces.len());
+                eprintln!(
+                    "⚠️  {} native build surface(s) detected (fail-critical)",
+                    surfaces.len()
+                );
                 std::process::exit(1);
             }
         }
