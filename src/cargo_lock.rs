@@ -64,6 +64,12 @@ pub fn parse_cargo_lock(content: &str) -> anyhow::Result<Vec<Package>> {
         anyhow::anyhow!("not a parsable Cargo.lock ({e}) — refusing to report it as clean")
     })?;
 
+    if file.package.is_empty() {
+        return Err(anyhow::anyhow!(
+            "no packages found — not a valid Cargo.lock"
+        ));
+    }
+
     if let Some(version) = toml_lockfile_version(content) {
         if version != 3 && version != 4 {
             eprintln!(
@@ -484,5 +490,23 @@ dependencies = [
         assert!(looks_like_proc_macro("futures-macro"));
         assert!(!looks_like_proc_macro("serde"));
         assert!(!looks_like_proc_macro("tokio"));
+    }
+
+    #[test]
+    fn valid_toml_with_zero_packages_is_an_error() {
+        // A file that parses as valid TOML but contains no [[package]] section
+        // must not return Ok(vec![]) — that would be reported as "0 findings — clean".
+        let input = r#"
+version = 3
+
+[[patch.unused]]
+name = "serde"
+version = "1.0.0"
+"#;
+        let err = parse_cargo_lock(input).unwrap_err();
+        assert!(
+            err.to_string().contains("no packages found"),
+            "expected an explicit refusal, got: {err}"
+        );
     }
 }
