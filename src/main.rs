@@ -319,9 +319,12 @@ fn main() -> Result<()> {
                 for m in &malicious {
                     eprintln!("  BLOCKED: {}@{}", m.name, m.version);
                 }
-                if args.fail_critical {
-                    std::process::exit(1);
-                }
+                std::process::exit(1);
+            }
+
+            if args.fail_critical && !surfaces.is_empty() {
+                eprintln!("⚠️  {} native build surface(s) detected (fail-critical)", surfaces.len());
+                std::process::exit(1);
             }
         }
     } else if args.watch {
